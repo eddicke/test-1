@@ -5,8 +5,8 @@
 
     <title>Babylon.js sample code</title>
     <!-- Babylon.js -->
-    <script src="hand.minified-1.2.js"></script>
-    <script src="babylon.js"></script>
+    <script src="http://www.babylonjs.com/hand.minified-1.2.js"></script>
+    <script src="http://www.babylonjs.com/babylon.js"></script>
     <style>
         html, body {
             overflow: hidden;
@@ -61,9 +61,18 @@
 
                 BABYLON.Effect.ShadersStore["customVertexShader"]=                "precision highp float;\r\n"+
                 "precision highp int;\r\n"+
-                "// Attributes\r\n"+
-                "//attribute vec3 position;\r\n"+
-                "//attribute vec2 uv;\r\n"+
+
+                "// Default THREE.js uniforms available to both fragment and vertex shader\r\n"+
+                "uniform mat4 modelMatrix;\r\n"+
+                "uniform mat4 worldViewProjection;\r\n"+
+                "uniform mat4 world;\r\n"+
+                "uniform mat4 viewMatrix;\r\n"+
+                "uniform mat3 normalMatrix;\r\n"+
+                "/////\r\n"+
+                "// Default uniforms provided by ShaderFrog.\r\n"+
+                "uniform vec3 cameraPosition;\r\n"+
+                "uniform float time;\r\n"+
+                "uniform float v;\r\n"+
                 "// Default attributes provided by THREE.js. Attributes are only available in the\r\n"+
                 "// vertex shader. You can pass them to the fragment shader using varyings\r\n"+
                 "attribute vec3 position;\r\n"+
@@ -71,123 +80,116 @@
                 "attribute vec2 uv;\r\n"+
                 "attribute vec2 uv2;\r\n"+
 
-
-
-                "// Uniforms\r\n"+
-                "uniform mat4 worldViewProjection;\r\n"+
-                "uniform mat4 modelMatrix;\r\n"+
-                "uniform mat4 modelViewMatrix;\r\n"+
-                "uniform mat4 projectionMatrix;\r\n"+
-                "uniform mat4 viewMatrix;\r\n"+
-                "uniform mat3 normalMatrix;\r\n"+
-                "// Default uniforms provided by ShaderFrog.\r\n"+
-                "uniform vec3 cameraPosition;\r\n"+
-                "uniform float time;\r\n"+
-
-                "// Varying\r\n"+
                 "// Examples of variables passed from vertex to fragment shader\r\n"+
                 "varying vec3 vPosition;\r\n"+
                 "varying vec3 vNormal;\r\n"+
                 "varying vec2 vUv;\r\n"+
                 "varying vec2 vUv2;\r\n"+
-                "void main(void) {\r\n"+
+
+                "void main() {\r\n"+
+
+                "    // To pass variables to the fragment shader, you assign them here in the\r\n"+
+                "    // main function. Traditionally you name the varying with vAttributeName\r\n"+
                 "    vNormal = normal;\r\n"+
                 "    vUv = uv;\r\n"+
                 "    vUv2 = uv2;\r\n"+
-                "    vPosition = position;\r\n"+
+                "   vPosition = position;\r\n"+
+                "    // This sets the position of the vertex in 3d space. The correct math is\r\n"+
+                "    // provided below to take into account camera and object data.\r\n"+
+                "    gl_Position = worldViewProjection * world * vec4( vPosition, 1.0 );\r\n"+
 
-                "    gl_Position = worldViewProjection * vec4(position, 1.0);\r\n"+
+                "}\r\n"+
 
-                "    vUv = uv;\r\n"+
-                "}\r\n";
+                " \r\n"+
 
-                BABYLON.Effect.ShadersStore["customFragmentShader"]=                "// Original https://www.shadertoy.com/view/MljSzW - Imported with permission\r\n"+
-                "// Created by Stefan Draganov - vortex/2015\r\n"+
-                "// License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.\r\n"+
+                " \r\n"+
+
+
+                BABYLON.Effect.ShadersStore["customFragmentShader"]=
 
                 "precision highp float;\r\n"+
                 "precision highp int;\r\n"+
-
-                "uniform vec2 resolution;\r\n"+
+                "  vec2 resolution;\r\n"+
                 "uniform float time;\r\n"+
-                "uniform float speed;\r\n"+
-                "uniform float baseRadius;\r\n"+
-                "uniform float colorVariation;\r\n"+
-                "uniform float brightnessVariation;\r\n"+
-                "uniform vec3 backgroundColor;\r\n"+
-                "uniform float variation;\r\n"+
-
                 "varying vec2 vUv;\r\n"+
-
-                "vec3 n(vec2 x, float t) {\r\n"+
-                "    vec3 v = floor(vec3(x, t));\r\n"+
-                "    vec3 u = vec3(mod(v.xy, variation), v.z);\r\n"+
-                "    vec3 c = fract( u.xyz * (\r\n"+
-                "        vec3(0.16462, 0.84787, 0.98273) +\r\n"+
-                "        u.xyz * vec3(0.24808, 0.75905, 0.13898) +\r\n"+
-                "        u.yzx * vec3(0.31517, 0.62703, 0.26063) +\r\n"+
-                "        u.zxy * vec3(0.47127, 0.58568, 0.37244)\r\n"+
-                "    ) + u.yzx * (\r\n"+
-                "        vec3(0.35425, 0.65187, 0.12423) +\r\n"+
-                "        u.yzx * vec3(0.95238, 0.93187, 0.95213) +\r\n"+
-                "        u.zxy * vec3(0.31526, 0.62512, 0.71837)\r\n"+
-                "    ) + u.zxy * (\r\n"+
-                "        vec3(0.95213, 0.13841, 0.16479) +\r\n"+
-                "        u.zxy * vec3(0.47626, 0.69257, 0.19738)\r\n"+
-                "    ) );\r\n"+
-                "    return v + c;\r\n"+
-                "}\r\n"+
-
-                "// Generate a predictably random color based on an input coord\r\n"+
-                "vec3 col(vec2 x, float t) {\r\n"+
-                "    return vec3(\r\n"+
-                "        0.5 + max( brightnessVariation * cos( x.y * x.x ), 0.0 )\r\n"+
-                "    ) + clamp(\r\n"+
-                "        colorVariation * cos(fract(vec3(x, t)) * 371.0241),\r\n"+
-                "        vec3( -0.4 ),\r\n"+
-                "        vec3( 1.0 )\r\n"+
-                "    );\r\n"+
-                "}\r\n"+
-
-                "vec2 idx(vec2 x) {\r\n"+
-                "    return floor(fract(x * 29.0) * 3.0) - vec2(1.0);\r\n"+
-                "}\r\n"+
-
-                "float circle(vec2 x, vec2 c, float r) {\r\n"+
-                "    return max(0.0, 1.0 - dot(x - c, x - c) / (r * r));\r\n"+
-                "}\r\n"+
-
-                "void main() {\r\n"+
-                "    \r\n"+
-                "    vec2 x = vUv * resolution;\r\n"+
-                "    float t = time * speed;\r\n"+
-                "    vec4 c = vec4(vec3(0.0), 0.1);\r\n"+
-                "    \r\n"+
-                "    for (int N = 0; N < 3; N++) {\r\n"+
-                "        for (int k = -1; k <= 0; k++) {\r\n"+
-                "            for (int i = -1; i <= 1; i++) {\r\n"+
-                "                for (int j = -1; j <= 1; j++) {\r\n"+
-                "                    vec2 X = x + vec2(j, i);\r\n"+
-                "                    float t = t + float(N) * 38.0;\r\n"+
-                "                    float T = t + float(k);\r\n"+
-                "                    vec3 a = n(X, T);\r\n"+
-                "                    vec2 o = idx(a.xy);\r\n"+
-                "                    vec3 b = n(X + o, T + 1.0);\r\n"+
-                "                    vec2 m = mix(a.xy, b.xy, (t - a.z) / (b.z - a.z));\r\n"+
-                "                    float r = baseRadius * sin(3.1415927 * clamp((t - a.z) / (b.z - a.z), 0.0, 1.0));\r\n"+
-                "                    if (length(a.xy - b.xy) / (b.z - a.z) > 2.0) {\r\n"+
-                "                        r = 0.0;\r\n"+
-                "                    }\r\n"+
-                "                    c += vec4(col(a.xy, a.z), 1.0) * circle(x, m, r);\r\n"+
-                "                }\r\n"+
-                "            }\r\n"+
-                "        }\r\n"+
-                "    }\r\n"+
-                "    \r\n"+
-                "    gl_FragColor = vec4(c.rgb / max(1e-5, c.w) + backgroundColor, 1.0);\r\n"+
-                "    \r\n"+
-                "}\r\n"+
-
+                "vec3 mod289(vec3 x) \r\n"+
+                "                                                                                    {\r\n"+
+                "                                                                                        return x - floor(x * (1.0 / 289.0)) * 289.0;\r\n"+
+                "                                                                                    }\r\n"+
+                "vec4 mod289(vec4 x) \r\n"+
+                "                                                                                    {\r\n"+
+                "                                                                                        return x - floor(x * (1.0 / 289.0)) * 289.0;\r\n"+
+                "                                                                                    }\r\n"+
+                "vec4 permute(vec4 x) \r\n"+
+                "                                                                                    {\r\n"+
+                "                                                                                        return mod289(((x * 34.0) + 1.0) * x);\r\n"+
+                "                                                                                    }\r\n"+
+                "vec4 taylorInvSqrt(vec4 r) \r\n"+
+                "                                                                                    {\r\n"+
+                "                                                                                        return 1.79284291400159 - 0.85373472095314 * r;\r\n"+
+                "                                                                                    }\r\n"+
+                "float snoise(vec3 v) \r\n"+
+                "                                                                                    {\r\n"+
+                "                                                                                        const vec2 C = vec2(1.0 / 6.0, 1.0 / 3.0);\r\n"+
+                "                                                                                        const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);\r\n"+
+                "                                                                                        vec3 i = floor(v + dot(v, C.yyy));\r\n"+
+                "                                                                                        vec3 x0 = v - i + dot(i, C.xxx);\r\n"+
+                "                                                                                        vec3 g = step(x0.yzx, x0.xyz);\r\n"+
+                "                                                                                        vec3 l = 1.0 - g;\r\n"+
+                "                                                                                        vec3 i1 = min(g.xyz, l.zxy);\r\n"+
+                "                                                                                        vec3 i2 = max(g.xyz, l.zxy);\r\n"+
+                "                                                                                        vec3 x1 = x0 - i1 + C.xxx;\r\n"+
+                "                                                                                        vec3 x2 = x0 - i2 + C.yyy;\r\n"+
+                "                                                                                        vec3 x3 = x0 - D.yyy;\r\n"+
+                "                                                                                        i = mod289(i);\r\n"+
+                "                                                                                        vec4 p = permute(permute(permute(i.z + vec4(0.0, i1.z, i2.z, 1.0)) + i.y + vec4(0.0, i1.y, i2.y, 1.0)) + i.x + vec4(0.0, i1.x, i2.x, 1.0));\r\n"+
+                "                                                                                        float n_ = 0.142857142857;\r\n"+
+                "                                                                                        vec3 ns = n_ * D.wyz - D.xzx;\r\n"+
+                "                                                                                        vec4 j = p - 49.0 * floor(p * ns.z * ns.z);\r\n"+
+                "                                                                                        vec4 x_ = floor(j * ns.z);\r\n"+
+                "                                                                                        vec4 y_ = floor(j - 7.0 * x_);\r\n"+
+                "                                                                                        vec4 x = x_ * ns.x + ns.yyyy;\r\n"+
+                "                                                                                        vec4 y = y_ * ns.x + ns.yyyy;\r\n"+
+                "                                                                                        vec4 h = 1.0 - abs(x) - abs(y);\r\n"+
+                "                                                                                        vec4 b0 = vec4(x.xy, y.xy);\r\n"+
+                "                                                                                        vec4 b1 = vec4(x.zw, y.zw);\r\n"+
+                "                                                                                        vec4 s0 = floor(b0) * 2.0 + 1.0;\r\n"+
+                "                                                                                        vec4 s1 = floor(b1) * 2.0 + 1.0;\r\n"+
+                "                                                                                        vec4 sh = -step(h, vec4(0.0));\r\n"+
+                "                                                                                        vec4 a0 = b0.xzyw + s0.xzyw * sh.xxyy;\r\n"+
+                "                                                                                        vec4 a1 = b1.xzyw + s1.xzyw * sh.zzww;\r\n"+
+                "                                                                                        vec3 p0 = vec3(a0.xy, h.x);\r\n"+
+                "                                                                                        vec3 p1 = vec3(a0.zw, h.y);\r\n"+
+                "                                                                                        vec3 p2 = vec3(a1.xy, h.z);\r\n"+
+                "                                                                                        vec3 p3 = vec3(a1.zw, h.w);\r\n"+
+                "                                                                                        vec4 norm = taylorInvSqrt(vec4(dot(p0, p0), dot(p1, p1), dot(p2, p2), dot(p3, p3)));\r\n"+
+                "                                                                                        p0 *= norm.x;\r\n"+
+                "                                                                                        p1 *= norm.y;\r\n"+
+                "                                                                                        p2 *= norm.z;\r\n"+
+                "                                                                                        p3 *= norm.w;\r\n"+
+                "                                                                                        vec4 m = max(0.6 - vec4(dot(x0, x0), dot(x1, x1), dot(x2, x2), dot(x3, x3)), 0.0);\r\n"+
+                "                                                                                        m = m * m;\r\n"+
+                "                                                                                        return 42.0 * dot(m * m, vec4(dot(p0, x0), dot(p1, x1), dot(p2, x2), dot(p3, x3)));\r\n"+
+                "                                                                                    }\r\n"+
+                "void main() \r\n"+
+                "                                                                                    {\r\n"+
+                "                                                                                        vec2 div = vec2(10, 10);\r\n"+
+                "                                                                                        vec2 uv = vUv.xy / resolution.xy * div.xy;\r\n"+
+                "                                                                                        vec3 v = vec3(uv.x + sin(time) * 0.2, uv.y + cos(time) * 0.2, time / 10.0);\r\n"+
+                "                                                                                        float noise = snoise(v);\r\n"+
+                "                    resolution = vec2(1, 1);                                                                      uv = vUv.xy / resolution.xy * div.xy;\r\n"+
+                "                                                                                        vec3 v2 = vec3(uv.x, uv.y, time / 5.0);\r\n"+
+                "                                                                                        noise = sin(noise * 3.14 * (sin(time) + snoise(v2) * 2.0) * 0.75);\r\n"+
+                "                                                                                        float darkenFactor = 0.2;\r\n"+
+                "                                                                                        float darkenValue = darkenFactor;\r\n"+
+                "                                                                                        div = vec2(5, 5);\r\n"+
+                "                                                                                        uv = vUv.xy / resolution.xy * div.xy;\r\n"+
+                "                                                                                        vec3 v3 = vec3(uv.x, uv.y, time / 2.0);\r\n"+
+                "                                                                                        darkenValue = darkenValue * snoise(v3);\r\n"+
+                "                                                                                        vec3 v4 = vec3(uv.x * 1000.0, uv.y * 1000.0, time);\r\n"+
+                "                                                                                        float b = snoise(v4) * 0.1;\r\n"+
+                "                                                                                        gl_FragColor = vec4(1.0 - darkenValue + (noise * (darkenValue + 0.2)) - b, noise - b, b, 1.0);\r\n"+
+                "                                                                                    }\r\n";
 
                 selectMesh(2);
 
